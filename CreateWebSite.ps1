@@ -1,0 +1,1 @@
+New-WebApplication -Site "Default Web Site" -Name MVC_5322 -PhysicalPath c:\inetpub\wwwroot\MVC_5322 -Force

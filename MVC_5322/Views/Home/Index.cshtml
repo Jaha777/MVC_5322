@@ -1,0 +1,233 @@
+﻿<script src="~/Scripts/react.development.js"></script>
+<script src="~/Scripts/react-dom.development.js"></script>
+<script src="~/Scripts/JSXTransformer.js"></script>
+<div id="ReactApp"></div>
+
+<script type="text/jsx">
+
+    const { useState, useEffect } = React;
+
+    async function postData(url = '', data = {}) {
+      const response = await fetch(url, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify(data)
+      });
+      return await response.json();
+    }
+
+    async function putData(url = '', data = {}) {
+      const response = await fetch(url, {
+        method: 'PUT', 
+        mode: 'cors', 
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify(data)
+      });
+      return await response.json();
+    }
+
+    async function deleteData(url = '', data = {}) {
+      const response = await fetch(url, {
+        method: 'DELETE',
+        mode: 'cors',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+      });
+      return await response.json();
+    }
+
+    const App = ()=>{
+
+        const domain = 'https://localhost:44325';
+
+			const [loading, setLoading]         = useState(false);
+			const [products, setProducts]       = useState([]);
+
+            const [refreshPage, setRefresh] = useState(0);
+
+			useEffect(()=>{
+				// mounted
+				setLoading(true);
+				$.get(domain + '/api/product').then(data => {
+					console.log(data);
+                    setLoading(false);
+					setProducts(data || []);
+				});
+
+			}, [refreshPage]);
+
+            
+            const [isNew, setNew] = useState(true);
+            const [formOpen, setModal] = useState(false);
+
+            const [prod, setProd] = useState({
+                Id: 0,
+                Name: '',
+                Category: '',
+                Description: '',
+                Price: 0,
+                DateAdded: Date.now(),
+                Quantity: 0,
+            });
+
+            const FormEdit = (isNewww, id)=>{
+                setNew(isNewww);
+                setModal(true);
+                if(!isNewww){
+                    var {category, name, description, price, quantity, dateAdded} = products.find(p=>p.id === Number(id))
+                    setProd({
+                        Id: id,
+                        Name: name,
+                        Category: category,
+                        Description: description,
+                        Price: price,
+                        DateAdded: dateAdded,
+                        Quantity: quantity,
+                    });
+                }else{
+                    setProd({
+                        Id: 0,
+                        Name: '',
+                        Category: '',
+                        Description: '',
+                        Price: 0,
+                        DateAdded: Date.now(),
+                        Quantity: 0,
+                    });
+                }
+            }
+
+            const SaveData = ()=>{
+                setLoading(true);
+                if(isNew){
+                    postData(domain + '/api/product', {
+                        "Name": prod.Name,
+                        "Category": prod.Category,
+                        "Description": prod.Description,
+                        "Price": prod.Price,
+                        "Quantity": prod.Quantity
+                    }).then(({id, title}) => {
+					    if(id){
+                            setModal(false);
+                            setTimeout(()=>{
+                                setRefresh(x=>x+1);
+                            }, 1000);
+                        }
+				    });
+                }else{
+                    putData(domain + '/api/product/'+prod.Id, {
+                        "Id": prod.Id,
+                        "Name": prod.Name,
+                        "Category": prod.Category,
+                        "Description": prod.Description,
+                        "Price": prod.Price,
+                        "Quantity": prod.Quantity
+                    }).then(() => {});
+                    setModal(false);
+                    setTimeout(()=>{
+                       setRefresh(x=>x+1);
+                    }, 1000);
+                }
+                setLoading(false);
+            }
+
+            const Delete = id => {
+                console.log(id);
+                if(confirm("Are you sure to delete?") === true){
+                    // delete
+                    deleteData(domain + '/api/product/'+id).then(() => {
+                        setModal(false);
+				    });
+                    setTimeout(()=>{
+                        setRefresh(x=>x+1);
+                    }, 1000);
+                }
+            }
+
+
+			// JSX to be rendered 👇👇👇
+			return (
+				<div>
+                    <center>
+                        <br />
+                        <div>
+                            <table style={{display: formOpen ? 'block' : 'none'}}>
+                                <tr>
+                                    <td>Name</td>
+                                    <td><input type="text" className="form-control" value={prod.Name} onChange={()=> setProd(x=>({...x, Name: event.target.value}))}/></td>
+                                </tr>
+                                <tr>
+                                    <td>Category</td>
+                                    <td><input type="text" className="form-control" value={prod.Category} onChange={()=> setProd(x=>({...x, Category: event.target.value}))}/></td>
+                                </tr>
+                                <tr>
+                                    <td>Description</td>
+                                    <td><input type="text" className="form-control" value={prod.Description} onChange={()=> setProd(x=>({...x, Description: event.target.value}))}/></td>
+                                </tr>
+                                <tr>
+                                    <td>Price</td>
+                                    <td><input type="number" className="form-control" value={prod.Price} onChange={()=> setProd(x=>({...x, Price: Number(event.target.value)}))}/></td>
+                                </tr>
+                                <tr>
+                                    <td>Quantity</td>
+                                    <td><input type="number" className="form-control" value={prod.Quantity} onChange={()=> setProd(x=>({...x, Quantity: Number(event.target.value)}))}/></td>
+                                </tr>
+                                <tr>
+                                    <td></td>
+                                    <td><button onClick={()=>SaveData()}>Save</button><button onClick={()=>setModal(false)}>Cancel</button></td>
+                                </tr>
+                            </table>
+                        </div>
+                        <br />
+                        <button className="btn btn-success" onClick={()=>FormEdit(true)}>Create new Product</button>
+						<div style={{visibility: loading ? 'visible' : 'hidden'}}>Loading data...</div>
+                        <table className="table">
+							<thead>
+							  <tr>
+								<th scope="col">Name</th>
+								<th scope="col">Category</th>
+								<th scope="col">Price</th>
+								<th scope="col">Description</th>
+								<th scope="col">Quantity</th>
+                                <th scope="col">Date</th>
+                                <th scope="col">More</th>
+							  </tr>
+							</thead>
+							<tbody>
+							  {
+								  products.map((product, index)=>(
+									<tr key={product.id}>
+										<td>{product.name}</td>
+										<td>{product.category}</td>
+										<td>{product.price} uzs</td>
+										<td>{product.description}</td>
+										<td>{product.quantity}</td>
+                                        <td>{product.dateAdded}</td>
+										<td>
+											<button className="btn-default btn" onClick={()=> FormEdit(false, product.id)}>Edit</button>
+											<button className="btn-default btn" onClick={()=> Delete(product.id)}>Delete</button>
+										</td>
+									</tr>
+								  ))
+							  }
+							</tbody>
+						</table>
+
+						<br /><br />
+                    </center>
+				</div>
+			)
+    }
+
+    ReactDOM.render(<App />, document.getElementById('ReactApp'));
+
+</script>
+
+<style>
+    
+</style>
